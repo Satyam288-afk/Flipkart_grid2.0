@@ -1,0 +1,36 @@
+{
+  "trained_at": "2026-06-16T15:13:58.636750+00:00",
+  "train_rows": 6538,
+  "test_rows": 1635,
+  "model_type": {
+    "road_closure": "CatBoostClassifier",
+    "priority": "CatBoostClassifier",
+    "duration": "CatBoostRegressor"
+  },
+  "road_closure_model": {
+    "roc_auc": 0.8227691669103705,
+    "average_precision": 0.37911541217300915,
+    "accuracy": 0.8189602446483181,
+    "precision": 0.2735294117647059,
+    "recall": 0.6549295774647887,
+    "f1": 0.38589211618257263,
+    "high_risk_threshold": 0.7268262723293223,
+    "recall_for_high_risk_events": 0.4788732394366197,
+    "top_10_percent_risk_capture_rate": 0.4788732394366197
+  },
+  "high_priority_model": {
+    "roc_auc": 1.0,
+    "average_precision": 1.0,
+    "accuracy": 0.999388379204893,
+    "precision": 1.0,
+    "recall": 0.9990089197224975,
+    "f1": 0.9995042141794744,
+    "high_risk_threshold": 0.9998544300342022,
+    "recall_for_high_risk_events": 0.16253716551040634,
+    "top_10_percent_risk_capture_rate": 0.16253716551040634
+  },
+  "duration_model": {
+    "mae_hours": 9.064464903825401
+  },
+  "label_notes": "Primary target is requires_road_closure. Priority is a secondary operational signal."
+}
