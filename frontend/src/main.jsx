@@ -104,6 +104,16 @@ function titleCase(value) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+async function apiError(response, fallback) {
+  try {
+    const payload = await response.json();
+    if (payload.detail) return `${fallback}: ${payload.detail}`;
+  } catch {
+    // Non-JSON deployment errors still need a readable fallback.
+  }
+  return `${fallback}: HTTP ${response.status}`;
+}
+
 function Field({ label, value, onChange, type = "text", options }) {
   if (options) {
     return (
@@ -494,7 +504,7 @@ function App() {
     event.preventDefault(); setLoading(true); setError("");
     try {
       const response = await fetch(`${API_BASE}/predict-impact`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, latitude: Number(form.latitude), longitude: Number(form.longitude) }) });
-      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      if (!response.ok) throw new Error(await apiError(response, "Prediction API failed"));
       setResult(await response.json());
       setActiveView("command");
     } catch (err) { setError(err.message || "Prediction failed"); } finally { setLoading(false); }
@@ -505,7 +515,7 @@ function App() {
     try {
       const responses = await Promise.all(makeWhatIfPayloads(form).map(async (scenario) => {
         const response = await fetch(`${API_BASE}/predict-impact`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...scenario.payload, latitude: Number(scenario.payload.latitude), longitude: Number(scenario.payload.longitude) }) });
-        if (!response.ok) throw new Error(`What-if API returned ${response.status}`);
+        if (!response.ok) throw new Error(await apiError(response, "What-if API failed"));
         return { ...scenario, result: await response.json() };
       }));
       setWhatIfResults(responses);

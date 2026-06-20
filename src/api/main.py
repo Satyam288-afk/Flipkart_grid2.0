@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from typing import Literal, Optional
 
@@ -13,6 +14,8 @@ from src.predict import hotspots, load_model_bundle, predict_impact, similar_eve
 from src.recommend import recommend_plan
 from src.security import auth_mode, require_api_key
 from src.storage import audit_log, create_live_event, init_db, list_live_events, operational_summary, update_approval
+
+logger = logging.getLogger(__name__)
 
 
 class EventImpactRequest(BaseModel):
@@ -73,7 +76,11 @@ def health():
 
 @app.post("/predict-impact")
 def predict_impact_endpoint(request: EventImpactRequest):
-    return predict_impact(request.model_dump())
+    try:
+        return predict_impact(request.model_dump())
+    except Exception as exc:
+        logger.exception("Prediction failed")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {type(exc).__name__}: {exc}") from exc
 
 
 @app.post("/live-events", dependencies=[Depends(require_api_key)])
