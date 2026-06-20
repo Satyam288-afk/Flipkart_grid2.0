@@ -295,6 +295,32 @@ If using the bundled Codex runtime locally:
 PATH="/Users/satyamkumar/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH" npm run dev
 ```
 
+## Deploy
+
+The recommended hackathon deployment is a single Docker web service. The container builds the React dashboard and serves it from FastAPI on the same domain as the API.
+
+Local container build:
+
+```bash
+docker build -t eventgrid-ai .
+docker run --rm -p 8000:8000 eventgrid-ai
+```
+
+Open:
+
+- `http://localhost:8000`
+- `http://localhost:8000/health`
+
+Render deployment:
+
+1. Push this repo to GitHub.
+2. In Render, create a new Blueprint or Web Service from the repo.
+3. Use the included `render.yaml` or Docker environment.
+4. Keep `EVENTGRID_API_KEY` unset for the public demo, or set it only if the frontend is updated to send an operator key for mutating endpoints.
+5. After deploy, verify `/health`, `/model-metrics`, and one `/predict-impact` request.
+
+The frontend defaults to same-origin API calls in production, so `VITE_API_BASE` is not required for the single-container deployment.
+
 ## API Endpoints
 
 - `GET /health`
