@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store
+.env
+data/eventgrid.db
+frontend/node_modules/
+frontend/dist/
+Astram event data_anonymized - Astram event data_anonymizedb40ac87.csv

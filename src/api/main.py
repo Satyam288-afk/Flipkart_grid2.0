@@ -5,8 +5,10 @@ from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from src.config import FRONTEND_DIST_PATH
 from src.predict import hotspots, load_model_bundle, predict_impact, similar_events
 from src.recommend import recommend_plan
 from src.security import auth_mode, require_api_key
@@ -181,3 +183,7 @@ def recommend_plan_endpoint(request: RecommendPlanRequest):
         "response_team_type": recommendation.response_team_type,
         "explanation": recommendation.explanation,
     }
+
+
+if FRONTEND_DIST_PATH.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST_PATH, html=True), name="frontend")

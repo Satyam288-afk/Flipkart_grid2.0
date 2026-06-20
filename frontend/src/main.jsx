@@ -18,7 +18,7 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from "react-le
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:8000" : window.location.origin);
 
 const demoScenarios = [
   {
