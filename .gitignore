@@ -4,5 +4,6 @@ __pycache__/
 .DS_Store
 .env
 Astram event data_anonymized - Astram event data_anonymizedb40ac87.csv
+data/eventgrid.db
 frontend/node_modules/
 frontend/dist/

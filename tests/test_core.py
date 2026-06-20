@@ -54,6 +54,7 @@ def test_predict_impact_endpoint_contract():
             "zone": "Central Zone",
             "junction": "BashyamCircle",
             "description": "Tree fall blocking one lane after heavy rain",
+            "operating_mode": "balanced",
         },
     )
     assert response.status_code == 200
@@ -62,7 +63,51 @@ def test_predict_impact_endpoint_contract():
     assert payload["risk_level"] in {"Low", "Medium", "High", "Critical"}
     assert "road_closure_probability" in payload
     assert len(payload["score_components"]) == 4
+    assert payload["top_prediction_factors"]
+    assert payload["diversion_plan"]["diversion_type"] in {
+        "NO_DIVERSION",
+        "LOCAL_TRAFFIC_CONTROL",
+        "PARTIAL_DIVERSION",
+        "FULL_DIVERSION_REQUIRED",
+    }
+    assert payload["closure_decision"]["operating_mode"] == "balanced"
+    assert "prediction_confidence" in payload
+    assert 0 <= payload["prediction_confidence"]["confidence_score"] <= 100
     assert payload["similar_event_evidence"]["sample_size"] == len(payload["similar_past_events"])
     assert payload["action_timeline"]
     assert payload["incident_report"]["report_id"].startswith("EGRID-")
     assert isinstance(payload["similar_past_events"], list)
+
+
+def test_live_event_approval_flow():
+    client = TestClient(app)
+    response = client.post(
+        "/live-events",
+        json={
+            "event_type": "unplanned",
+            "event_cause": "water_logging",
+            "latitude": 12.9219,
+            "longitude": 77.6452,
+            "start_datetime": "2024-04-08T09:15:00+05:30",
+            "corridor": "ORR East 1",
+            "police_station": "HSR Layout",
+            "zone": "South East Zone",
+            "junction": "AgaraJunction",
+            "description": "Water logging reported after heavy rain",
+            "operating_mode": "high_recall",
+        },
+    )
+    assert response.status_code == 200
+    live_event = response.json()
+    assert live_event["approval_status"] == "pending"
+
+    approval = client.post(
+        f"/live-events/{live_event['id']}/approval",
+        json={"status": "approved", "reviewer": "test_operator", "note": "validated in test"},
+    )
+    assert approval.status_code == 200
+    assert approval.json()["approval_status"] == "approved"
+
+    summary = client.get("/monitoring/summary")
+    assert summary.status_code == 200
+    assert summary.json()["operations"]["live_events_total"] >= 1
