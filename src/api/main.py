@@ -50,6 +50,7 @@ class ApprovalRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    load_model_bundle()
     yield
 
 

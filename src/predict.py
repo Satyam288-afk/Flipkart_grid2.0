@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 from datetime import datetime, UTC
 from functools import lru_cache
 
@@ -36,7 +37,11 @@ def load_model_bundle() -> dict:
     try:
         return joblib.load(MODEL_BUNDLE_PATH)
     except Exception:
-        logger.exception("Failed to load model bundle. Rebuilding model artifact from data/events.csv.")
+        logger.exception("Failed to load model bundle.")
+        if os.getenv("EVENTGRID_RUNTIME_RETRAIN", "").lower() not in {"1", "true", "yes"}:
+            raise RuntimeError("Model bundle failed to load. Rebuild the Docker image so the model is trained with the deployed runtime.") from None
+
+        logger.info("EVENTGRID_RUNTIME_RETRAIN enabled. Rebuilding model artifact from data/events.csv.")
         from .train import train
 
         train()

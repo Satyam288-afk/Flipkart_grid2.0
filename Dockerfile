@@ -27,6 +27,7 @@ COPY data ./data
 COPY models ./models
 COPY reports ./reports
 COPY MODEL_CARD.md README.md ./
+RUN python -m src.train && python -m src.model_diagnostics
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 EXPOSE 8000
