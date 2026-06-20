@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from datetime import datetime, UTC
 from functools import lru_cache
 
@@ -12,6 +13,8 @@ import pandas as pd
 from .config import LOCAL_TZ, MODEL_BUNDLE_PATH
 from .data_processing import normalize_category
 from .recommend import recommend_plan, risk_level
+
+logger = logging.getLogger(__name__)
 
 
 def parse_event_datetime(value: str | None) -> pd.Timestamp:
@@ -30,7 +33,14 @@ def load_model_bundle() -> dict:
         from .train import train
 
         train()
-    return joblib.load(MODEL_BUNDLE_PATH)
+    try:
+        return joblib.load(MODEL_BUNDLE_PATH)
+    except Exception:
+        logger.exception("Failed to load model bundle. Rebuilding model artifact from data/events.csv.")
+        from .train import train
+
+        train()
+        return joblib.load(MODEL_BUNDLE_PATH)
 
 
 def predict_probability(model, features: pd.DataFrame) -> float:
