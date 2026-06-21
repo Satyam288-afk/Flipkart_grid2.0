@@ -27,29 +27,33 @@ EventGrid AI predicts operational road-closure risk for planned and unplanned tr
 - Test rows: 1635.
 - Test positive rate: 0.0869.
 
+## Secondary Priority Signal
+
+The high-priority model is retained only as a secondary operational signal. In this dataset, priority is strongly tied to location/corridor structure: average corridor priority purity is 0.984 and average junction priority purity is 0.976. The model is therefore learning a corridor/junction-level priority pattern, not solving a hard independent per-incident classification problem.
+
 ## Current Road-Closure Metrics
 
-- ROC-AUC: 0.823
-- PR-AUC: 0.379
-- Precision at 0.5: 0.274
-- Recall at 0.5: 0.655
-- F1 at 0.5: 0.386
-- Top 10% risk capture: 0.479
+- ROC-AUC: 0.836
+- PR-AUC: 0.397
+- Precision at 0.5: 0.284
+- Recall at 0.5: 0.662
+- F1 at 0.5: 0.397
+- Top 10% risk capture: 0.493
 
 ## Serving Operating Point
 
 - Balanced threshold: 0.75
-- Precision at balanced threshold: 0.427
-- Recall at balanced threshold: 0.472
-- F1 at balanced threshold: 0.448
+- Precision at balanced threshold: 0.451
+- Recall at balanced threshold: 0.486
+- F1 at balanced threshold: 0.468
 - Serving probability mode: raw
 - Calibration evaluator status: applied
 
 ## Suggested Operating Points
 
-- Balanced F1 threshold: 0.75 with F1 0.4482.
-- High-recall operations threshold: 0.35 with recall 0.7746.
-- High-precision operations threshold: 0.85 with precision 0.4362.
+- Balanced F1 threshold: 0.75 with F1 0.4678.
+- High-recall operations threshold: 0.4 with recall 0.7606.
+- High-precision operations threshold: 0.85 with precision 0.4578.
 
 ## Safety and Limitations
 

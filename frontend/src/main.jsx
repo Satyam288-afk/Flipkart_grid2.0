@@ -19,6 +19,7 @@ import "leaflet/dist/leaflet.css";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:8000" : window.location.origin);
+const API_KEY = import.meta.env.VITE_EVENTGRID_API_KEY || "";
 
 const demoScenarios = [
   {
@@ -112,6 +113,13 @@ async function apiError(response, fallback) {
     // Non-JSON deployment errors still need a readable fallback.
   }
   return `${fallback}: HTTP ${response.status}`;
+}
+
+function apiHeaders({ json = true, auth = false } = {}) {
+  const headers = {};
+  if (json) headers["Content-Type"] = "application/json";
+  if (auth && API_KEY) headers["X-API-Key"] = API_KEY;
+  return headers;
 }
 
 function Field({ label, value, onChange, type = "text", options }) {
@@ -503,7 +511,7 @@ function App() {
   async function predict(event) {
     event.preventDefault(); setLoading(true); setError("");
     try {
-      const response = await fetch(`${API_BASE}/predict-impact`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, latitude: Number(form.latitude), longitude: Number(form.longitude) }) });
+      const response = await fetch(`${API_BASE}/predict-impact`, { method: "POST", headers: apiHeaders(), body: JSON.stringify({ ...form, latitude: Number(form.latitude), longitude: Number(form.longitude) }) });
       if (!response.ok) throw new Error(await apiError(response, "Prediction API failed"));
       setResult(await response.json());
       setActiveView("command");
@@ -514,7 +522,7 @@ function App() {
     setWhatIfLoading(true); setError("");
     try {
       const responses = await Promise.all(makeWhatIfPayloads(form).map(async (scenario) => {
-        const response = await fetch(`${API_BASE}/predict-impact`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...scenario.payload, latitude: Number(scenario.payload.latitude), longitude: Number(scenario.payload.longitude) }) });
+        const response = await fetch(`${API_BASE}/predict-impact`, { method: "POST", headers: apiHeaders(), body: JSON.stringify({ ...scenario.payload, latitude: Number(scenario.payload.latitude), longitude: Number(scenario.payload.longitude) }) });
         if (!response.ok) throw new Error(await apiError(response, "What-if API failed"));
         return { ...scenario, result: await response.json() };
       }));
@@ -525,23 +533,23 @@ function App() {
   async function saveCurrentEvent() {
     setLiveLoading(true); setError("");
     try {
-      const response = await fetch(`${API_BASE}/live-events?source=operator_dashboard`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, latitude: Number(form.latitude), longitude: Number(form.longitude) }) });
-      if (!response.ok) throw new Error(`Live event API returned ${response.status}`);
+      const response = await fetch(`${API_BASE}/live-events?source=operator_dashboard`, { method: "POST", headers: apiHeaders({ auth: true }), body: JSON.stringify({ ...form, latitude: Number(form.latitude), longitude: Number(form.longitude) }) });
+      if (!response.ok) throw new Error(await apiError(response, "Live event API failed"));
       await refreshOperations(); setActiveView("live");
     } catch (err) { setError(err.message || "Live event save failed"); } finally { setLiveLoading(false); }
   }
 
   async function simulateLiveFeed() {
     setLiveLoading(true); setError("");
-    try { const response = await fetch(`${API_BASE}/simulate-live-feed`, { method: "POST" }); if (!response.ok) throw new Error(`Simulated feed API returned ${response.status}`); await refreshOperations(); }
+    try { const response = await fetch(`${API_BASE}/simulate-live-feed`, { method: "POST", headers: apiHeaders({ json: false, auth: true }) }); if (!response.ok) throw new Error(await apiError(response, "Simulated feed API failed")); await refreshOperations(); }
     catch (err) { setError(err.message || "Simulated feed failed"); } finally { setLiveLoading(false); }
   }
 
   async function reviewLiveEvent(id, status) {
     setLiveLoading(true); setError("");
     try {
-      const response = await fetch(`${API_BASE}/live-events/${id}/approval`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, reviewer: "control_room_operator", note: status === "approved" ? "Approved from command dashboard" : "Rejected from command dashboard" }) });
-      if (!response.ok) throw new Error(`Approval API returned ${response.status}`);
+      const response = await fetch(`${API_BASE}/live-events/${id}/approval`, { method: "POST", headers: apiHeaders({ auth: true }), body: JSON.stringify({ status, reviewer: "control_room_operator", note: status === "approved" ? "Approved from command dashboard" : "Rejected from command dashboard" }) });
+      if (!response.ok) throw new Error(await apiError(response, "Approval API failed"));
       await refreshOperations();
     } catch (err) { setError(err.message || "Approval update failed"); } finally { setLiveLoading(false); }
   }

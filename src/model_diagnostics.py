@@ -91,12 +91,30 @@ def segment_diagnostics(test_df: pd.DataFrame, probabilities: np.ndarray, min_co
     ]
 
 
+def priority_structure_diagnostics(df: pd.DataFrame) -> dict:
+    frame = df.copy()
+    frame["priority_high"] = frame["priority"].eq("high").astype(int)
+    diagnostics = {}
+    for column in ["corridor", "junction"]:
+        grouped = frame.groupby(column, dropna=False)["priority_high"].agg(["count", "mean"])
+        purity = grouped["mean"].where(grouped["mean"] >= 0.5, 1 - grouped["mean"])
+        diagnostics[column] = {
+            "group_count": int(len(grouped)),
+            "average_purity": round(float(purity.mean()), 4),
+            "weighted_average_purity": round(float((purity * grouped["count"]).sum() / grouped["count"].sum()), 4),
+        }
+    return diagnostics
+
+
 def write_model_card(diagnostics: dict) -> None:
     metrics = diagnostics["metrics"]["road_closure_model"]
     operating_metrics = diagnostics["metrics"].get("road_closure_operating_metrics", metrics)
     calibration = diagnostics["metrics"].get("road_closure_calibration", {})
     serving_strategy = diagnostics["metrics"].get("road_closure_serving_strategy", {})
     operating = diagnostics["operating_points"]
+    priority_structure = diagnostics["priority_structure"]
+    corridor_purity = priority_structure["corridor"]["average_purity"]
+    junction_purity = priority_structure["junction"]["average_purity"]
     content = f"""# EventGrid AI Model Card
 
 ## Model Purpose
@@ -125,6 +143,10 @@ EventGrid AI predicts operational road-closure risk for planned and unplanned tr
 - Split: time-based, older 80% train and newer 20% test.
 - Test rows: {diagnostics['test_rows']}.
 - Test positive rate: {diagnostics['test_positive_rate']}.
+
+## Secondary Priority Signal
+
+The high-priority model is retained only as a secondary operational signal. In this dataset, priority is strongly tied to location/corridor structure: average corridor priority purity is {corridor_purity:.3f} and average junction priority purity is {junction_purity:.3f}. The model is therefore learning a corridor/junction-level priority pattern, not solving a hard independent per-incident classification problem.
 
 ## Current Road-Closure Metrics
 
@@ -197,6 +219,7 @@ def generate_diagnostics(data_path=DATA_PATH) -> dict:
         "operating_points": choose_operating_points(thresholds),
         "calibration_bins": calibration_bins(y_test, probabilities),
         "segment_diagnostics": segment_diagnostics(test_df, probabilities),
+        "priority_structure": priority_structure_diagnostics(df),
         "recommendation": "Keep CatBoost as default. Use diagnostics to tune operating threshold by deployment mode; do not promote stacking unless PR-AUC and top-decile capture improve on time-based validation.",
     }
 

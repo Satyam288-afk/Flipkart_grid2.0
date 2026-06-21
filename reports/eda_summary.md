@@ -27,8 +27,8 @@
 
 ## Model Snapshot
 
-- Road closure ROC-AUC: 0.8227691669103705
-- Road closure PR-AUC: 0.37911541217300915
-- Top 10 percent risk capture: 0.4788732394366197
+- Road closure ROC-AUC: 0.8364716092940765
+- Road closure PR-AUC: 0.3967675866091295
+- Top 10 percent risk capture: 0.49295774647887325
 
 This dataset is an event operations dataset. EventGrid AI predicts operational impact using closure risk, priority risk, hotspot history, and duration estimates. It does not claim exact speed or traffic-flow prediction.

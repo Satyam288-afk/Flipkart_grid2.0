@@ -79,7 +79,7 @@ Pipeline:
 - Mixed-format datetime parsing with UTC to `Asia/Kolkata` conversion.
 - `0.0` `endlatitude` and `endlongitude` values treated as missing.
 - Time-based train/test split: earlier 80 percent for training, later 20 percent for validation.
-- Historical closure rate features are fit only on the training slice before validation.
+- Historical closure rate features are fit only on the training slice before validation and use count-based Bayesian smoothing so sparse categories shrink toward the global closure rate.
 - CatBoost is used when available; sklearn RandomForest fallback is included.
 - Class weighting is used for imbalanced road-closure prediction.
 
@@ -178,26 +178,26 @@ Generated at: `reports/metrics.json`
 
 Road-closure model on the time-based holdout:
 
-- ROC-AUC: `0.823`
-- PR-AUC / Average Precision: `0.379`
-- Precision: `0.274`
-- Recall: `0.655`
-- F1: `0.386`
-- Top 10 percent risk capture: `0.479`
+- ROC-AUC: `0.836`
+- PR-AUC / Average Precision: `0.397`
+- Precision: `0.284`
+- Recall: `0.662`
+- F1: `0.397`
+- Top 10 percent risk capture: `0.493`
 
 Serving strategy:
 
 - Serving probability mode: `raw CatBoost probability`
 - Reason: raw probabilities produced stronger holdout ranking and operating-threshold quality than the calibrated variant on this dataset.
 - Balanced operating threshold: `0.75`
-- Balanced operating precision / recall / F1: `0.427` / `0.472` / `0.448`
+- Balanced operating precision / recall / F1: `0.451` / `0.486` / `0.468`
 - Calibration is still evaluated and stored in diagnostics, but it is not used for serving when it weakens the operational objective.
 
 Duration model:
 
-- MAE: `9.06` hours
+- MAE: `9.31` hours
 
-The high-priority model is included only as a secondary operational signal. Its validation score is very high on this split, so it should not be used as the sole proof of system quality.
+The high-priority model is included only as a secondary operational signal. Its validation score is very high on this split because priority is strongly tied to location/corridor structure in the dataset; the model is learning a corridor/junction-level priority pattern, not solving a hard independent per-incident classification problem.
 
 Additional ML artifacts:
 
@@ -206,9 +206,9 @@ Additional ML artifacts:
 
 Suggested road-closure operating points from diagnostics:
 
-- Balanced F1 mode: threshold `0.75`, precision `0.427`, recall `0.472`, F1 `0.448`.
-- High-recall operations mode: threshold `0.35`, precision `0.195`, recall `0.775`.
-- High-precision operations mode: threshold `0.85`, precision `0.436`, recall `0.289`.
+- Balanced F1 mode: threshold `0.75`, precision `0.451`, recall `0.486`, F1 `0.468`.
+- High-recall operations mode: threshold `0.40`, precision `0.241`, recall `0.761`.
+- High-precision operations mode: threshold `0.85`, precision `0.458`, recall `0.268`.
 
 These thresholds are diagnostic outputs for operator tuning. The impact score still uses probability as a continuous risk signal rather than reducing the model to one hard threshold.
 
@@ -316,10 +316,15 @@ Render deployment:
 1. Push this repo to GitHub.
 2. In Render, create a new Blueprint or Web Service from the repo.
 3. Use the included `render.yaml` or Docker environment.
-4. Keep `EVENTGRID_API_KEY` unset for the public demo, or set it only if the frontend is updated to send an operator key for mutating endpoints.
+4. Keep `EVENTGRID_API_KEY` unset for the public demo, or set both `EVENTGRID_API_KEY` and matching `VITE_EVENTGRID_API_KEY` if you want the dashboard to call protected mutating endpoints.
 5. After deploy, verify `/health`, `/model-metrics`, and one `/predict-impact` request.
 
 The frontend defaults to same-origin API calls in production, so `VITE_API_BASE` is not required for the single-container deployment.
+
+Authentication modes:
+
+- Demo mode: leave `EVENTGRID_API_KEY` empty. Prediction, live event save, approvals, and feed simulation remain open for the hackathon walkthrough.
+- API-key mode: set `EVENTGRID_API_KEY` on the backend and `VITE_EVENTGRID_API_KEY` at frontend build time. The dashboard then sends `X-API-Key` for live-event, approval, and simulated-feed actions.
 
 ## API Endpoints
 

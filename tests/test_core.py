@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
+import pandas as pd
 
 from src.api.main import app
+from src.features import FeatureBuilder
 from src.predict import impact_score_from_components, parse_event_datetime
 from src.recommend import recommend_plan, risk_level
 
@@ -37,6 +39,27 @@ def test_datetime_parser_falls_back_for_invalid_input():
     parsed = parse_event_datetime("not-a-date")
     assert parsed.tzinfo is not None
     assert str(parsed.tzinfo) == "Asia/Kolkata"
+
+
+def test_feature_builder_smooths_sparse_target_rates():
+    df = pd.DataFrame(
+        {
+            "event_type": ["unplanned"] * 12,
+            "event_cause": ["rare"] + ["common"] * 11,
+            "latitude": [12.9] * 12,
+            "longitude": [77.6] * 12,
+            "start_datetime": pd.to_datetime(["2024-01-01T00:00:00+05:30"] * 12),
+            "corridor": ["c1"] * 12,
+            "police_station": ["p1"] * 12,
+            "zone": ["z1"] * 12,
+            "junction": ["j1"] * 12,
+            "description": [""] * 12,
+            "requires_road_closure": [1] + [0] * 11,
+        }
+    )
+    builder = FeatureBuilder(target_smoothing=20).fit(df)
+    assert 0 < builder.cause_rates["rare"] < 1
+    assert builder.cause_rates["rare"] < 0.2
 
 
 def test_predict_impact_endpoint_contract():

@@ -80,6 +80,7 @@ def add_base_features(df: pd.DataFrame) -> pd.DataFrame:
 
 @dataclass
 class FeatureBuilder:
+    target_smoothing: float = 20.0
     global_closure_rate: float = 0.0
     cause_rates: dict[str, float] = field(default_factory=dict)
     corridor_rates: dict[str, float] = field(default_factory=dict)
@@ -102,13 +103,21 @@ class FeatureBuilder:
     def categorical_indices(self) -> list[int]:
         return [self.feature_columns.index(col) for col in CATEGORICAL_COLUMNS + ["geo_bin"]]
 
+    def _smoothed_target_rates(self, base: pd.DataFrame, y: pd.Series, column: str) -> dict[str, float]:
+        grouped = y.groupby(base[column]).agg(["count", "mean"])
+        smoothed = (
+            grouped["count"] * grouped["mean"]
+            + self.target_smoothing * self.global_closure_rate
+        ) / (grouped["count"] + self.target_smoothing)
+        return smoothed.to_dict()
+
     def fit(self, df: pd.DataFrame) -> "FeatureBuilder":
         base = add_base_features(df)
         y = base["requires_road_closure"].astype(int)
         self.global_closure_rate = float(y.mean()) if len(y) else 0.0
-        self.cause_rates = y.groupby(base["event_cause"]).mean().to_dict()
-        self.corridor_rates = y.groupby(base["corridor"]).mean().to_dict()
-        self.police_rates = y.groupby(base["police_station"]).mean().to_dict()
+        self.cause_rates = self._smoothed_target_rates(base, y, "event_cause")
+        self.corridor_rates = self._smoothed_target_rates(base, y, "corridor")
+        self.police_rates = self._smoothed_target_rates(base, y, "police_station")
 
         counts = base["geo_bin"].value_counts()
         max_count = max(float(counts.max()), 1.0) if len(counts) else 1.0
